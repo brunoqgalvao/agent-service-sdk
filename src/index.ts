@@ -7,6 +7,7 @@ export { createNodeServiceRuntime } from "./runtime.js";
 export { scaffoldServiceProject } from "./scaffold.js";
 export { renderSkill } from "./artifacts/skill.js";
 export { renderLlmsTxt } from "./artifacts/llms.js";
+export { buildAgentServiceManifest } from "./artifacts/manifest.js";
 export {
   AgentServiceError,
   ForbiddenError,
@@ -28,3 +29,4 @@ export type {
 } from "./types.js";
 export type { NodeServiceRuntimeOptions } from "./runtime.js";
 export type { ScaffoldServiceProjectOptions } from "./scaffold.js";
+export type { AgentServiceManifestOptions } from "./artifacts/manifest.js";

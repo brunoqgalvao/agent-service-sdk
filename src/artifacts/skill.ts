@@ -74,9 +74,8 @@ ${commandTable}
 ${authSection}
 ## For Agents Without Terminal Access
 
-- Remote MCP endpoint: \`${options.origin}/mcp\`
-- OpenAPI spec: \`${options.origin}/v1/openapi.json\`
-- REST base: \`${options.origin}${service.basePath ?? "/api/agent"}\`
+- Service manifest: \`${options.origin}\`
+- Read the manifest, choose the best interface your host supports, authenticate if required, and use the operations listed there.
 
 ## MCP Tools
 

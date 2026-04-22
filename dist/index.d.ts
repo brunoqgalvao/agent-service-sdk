@@ -241,6 +241,126 @@ declare function renderLlmsTxt<TServiceContext>(service: AgentServiceDefinition<
     stdioCommand?: string;
 }): string;
 
+type AgentServiceManifestOptions = {
+    origin: string;
+    installCommand?: string;
+    stdioCommand?: string;
+};
+declare function buildAgentServiceManifest<TServiceContext>(service: AgentServiceDefinition<TServiceContext>, options: AgentServiceManifestOptions): {
+    manifestVersion: string;
+    kind: string;
+    instruction: string;
+    humanPrompt: string;
+    service: {
+        id: string;
+        name: string;
+        version: string;
+        description: string;
+    };
+    auth: {
+        kind: string;
+        required: boolean;
+        instructions: string;
+        description?: undefined;
+        profiles?: undefined;
+    } | {
+        kind: string;
+        required: boolean;
+        description: string;
+        instructions: string;
+        profiles: {
+            id: string;
+            label: string;
+            description: string | undefined;
+        }[];
+    };
+    operations: {
+        key: string;
+        title: string;
+        description: string;
+        scopes: string[];
+        inputSchema: object & {
+            $schema?: string | undefined;
+            definitions?: {
+                [key: string]: object;
+            } | undefined;
+        };
+        outputSchema: (object & {
+            $schema?: string | undefined;
+            definitions?: {
+                [key: string]: object;
+            } | undefined;
+        }) | null;
+        interfaces: {
+            rest: {
+                method: HttpMethod;
+                path: string;
+            };
+            mcp: {
+                toolName: string;
+            };
+            cli: {
+                command: string;
+            };
+        };
+    }[];
+    interfaces: {
+        mcpStdio?: {
+            command: string;
+        } | undefined;
+        preferredOrder: string[];
+        mcpHttp: {
+            url: string;
+            transport: string;
+            tools: string[];
+        };
+        openapi: {
+            url: string;
+            spec: {
+                paths: Record<string, Record<string, unknown>>;
+                security?: {
+                    bearerAuth: never[];
+                }[] | undefined;
+                openapi: string;
+                info: {
+                    title: string;
+                    version: string;
+                    description: string;
+                };
+                servers: {
+                    url: string;
+                }[];
+                components: {
+                    securitySchemes: {
+                        bearerAuth: {
+                            type: string;
+                            scheme: string;
+                        };
+                    } | {
+                        bearerAuth?: undefined;
+                    };
+                };
+            };
+        };
+        rest: {
+            baseUrl: string;
+            operations: {
+                key: string;
+                method: HttpMethod;
+                path: string;
+            }[];
+        };
+        cli: {
+            binaryName: string;
+            setupCommand: string;
+        };
+    };
+    artifacts: {
+        skillMarkdown: string;
+        llmsTxt: string;
+    };
+};
+
 declare class AgentServiceError extends Error {
     status: number;
     code: string;
@@ -260,4 +380,4 @@ declare class InvalidOutputError extends AgentServiceError {
     constructor(message?: string, details?: unknown);
 }
 
-export { type AgentOperationDefinition, type AgentServiceDefinition, AgentServiceError, type AuthDefinition, type AuthIdentity, type CliCredentials, ForbiddenError, type HttpMethod, InvalidOutputError, InvalidRequestError, type NodeServiceRuntimeOptions, type OperationDescriptor, type OperationSurfaceConfig, type ScaffoldServiceProjectOptions, type ServiceExecutionContext, type Surface, UnauthorizedError, buildOpenApiSpec, createMcpServer, createNodeServiceRuntime, createServiceCli, defineAgentService, describeOperations, getBinaryName, registerMcpHttpRoutes, registerServiceAdapters, renderLlmsTxt, renderSkill, scaffoldServiceProject, startStdioMcpServer };
+export { type AgentOperationDefinition, type AgentServiceDefinition, AgentServiceError, type AgentServiceManifestOptions, type AuthDefinition, type AuthIdentity, type CliCredentials, ForbiddenError, type HttpMethod, InvalidOutputError, InvalidRequestError, type NodeServiceRuntimeOptions, type OperationDescriptor, type OperationSurfaceConfig, type ScaffoldServiceProjectOptions, type ServiceExecutionContext, type Surface, UnauthorizedError, buildAgentServiceManifest, buildOpenApiSpec, createMcpServer, createNodeServiceRuntime, createServiceCli, defineAgentService, describeOperations, getBinaryName, registerMcpHttpRoutes, registerServiceAdapters, renderLlmsTxt, renderSkill, scaffoldServiceProject, startStdioMcpServer };

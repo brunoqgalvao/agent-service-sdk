@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import {
   scaffoldServiceProject
-} from "./chunk-IHULVTBN.js";
+} from "./chunk-JDZJWCNB.js";
 
 // src/bin.ts
 import { Command, InvalidArgumentError } from "commander";

@@ -1,6 +1,6 @@
 import {
   scaffoldServiceProject
-} from "./chunk-IHULVTBN.js";
+} from "./chunk-JDZJWCNB.js";
 
 // src/lib/schema.ts
 import { z } from "zod";
@@ -137,14 +137,14 @@ function renderLlmsTxt(service, options) {
 
 > ${service.description}
 
-## Integration Surfaces
+## Agent Setup
 
-- Remote MCP: ${options.origin}/mcp
-- Local stdio MCP: ${options.stdioCommand ?? "Not provided"}
-- OpenAPI: ${options.origin}/v1/openapi.json
-- REST base: ${options.origin}${service.basePath ?? "/api/agent"}
+- Service manifest: ${options.origin}
+- Human instruction: see ${options.origin}, set it up, and start using it.
+- Agent instruction: read the manifest, choose the best interface your host supports, authenticate if required, and use the operations listed there.
 - CLI binary: ${binaryName}
 - CLI setup: ${setupCommand}
+${options.stdioCommand ? `- Local stdio command: ${options.stdioCommand}` : ""}
 
 ## Authentication
 
@@ -213,9 +213,8 @@ ${commandTable}
 ${authSection}
 ## For Agents Without Terminal Access
 
-- Remote MCP endpoint: \`${options.origin}/mcp\`
-- OpenAPI spec: \`${options.origin}/v1/openapi.json\`
-- REST base: \`${options.origin}${service.basePath ?? "/api/agent"}\`
+- Service manifest: \`${options.origin}\`
+- Read the manifest, choose the best interface your host supports, authenticate if required, and use the operations listed there.
 
 ## MCP Tools
 
@@ -322,6 +321,106 @@ function buildOpenApiSpec(service, options) {
     },
     ...service.auth?.kind === "bearer" ? { security: [{ bearerAuth: [] }] } : {},
     paths
+  };
+}
+
+// src/artifacts/manifest.ts
+function buildAuthManifest(service) {
+  if (!service.auth || service.auth.kind === "none") {
+    return {
+      kind: "none",
+      required: false,
+      instructions: "No authentication required."
+    };
+  }
+  return {
+    kind: "bearer",
+    required: true,
+    description: service.auth.description ?? "This service requires bearer authentication.",
+    instructions: service.auth.cliSetup?.instructions ?? "Provide a bearer token when configuring the service.",
+    profiles: service.auth.cliSetup?.profiles?.map((profile) => ({
+      id: profile.id,
+      label: profile.label,
+      description: profile.description
+    })) ?? []
+  };
+}
+function buildOperationManifest(service, operation) {
+  return {
+    key: operation.key,
+    title: operation.title,
+    description: operation.description,
+    scopes: operation.scopes,
+    inputSchema: schemaToJsonSchema(operation.input, `${service.id}_${operation.slug}_input`),
+    outputSchema: operation.output ? schemaToJsonSchema(operation.output, `${service.id}_${operation.slug}_output`) : null,
+    interfaces: {
+      rest: {
+        method: operation.rest.method,
+        path: operation.rest.path
+      },
+      mcp: {
+        toolName: operation.mcp.toolName
+      },
+      cli: {
+        command: operation.cli.command
+      }
+    }
+  };
+}
+function buildAgentServiceManifest(service, options) {
+  const binaryName = getBinaryName(service);
+  const basePath = getBasePath(service);
+  const operations = describeOperations(service);
+  const installCommand = options.installCommand ?? `${binaryName} setup --origin ${options.origin}`;
+  const skillMarkdown = renderSkill(service, options);
+  const llmsTxt = renderLlmsTxt(service, options);
+  const openapi = buildOpenApiSpec(service, { origin: options.origin });
+  return {
+    manifestVersion: "agent-service-sdk/v1",
+    kind: "agent-service",
+    instruction: "This single document is the setup and usage entrypoint for agents. Do not ask the human to choose MCP, OpenAPI, REST, CLI, or skill setup. Read this manifest, choose the best interface your host supports, authenticate if required, and start using the operations.",
+    humanPrompt: `See ${options.origin}, set it up, and start using it.`,
+    service: {
+      id: service.id,
+      name: service.name,
+      version: service.version,
+      description: service.description
+    },
+    auth: buildAuthManifest(service),
+    operations: operations.map((operation) => buildOperationManifest(service, operation)),
+    interfaces: {
+      preferredOrder: ["mcp-http", "openapi", "rest", "cli", "mcp-stdio"],
+      mcpHttp: {
+        url: `${options.origin}/mcp`,
+        transport: "streamable-http",
+        tools: operations.map((operation) => operation.mcp.toolName)
+      },
+      openapi: {
+        url: `${options.origin}/v1/openapi.json`,
+        spec: openapi
+      },
+      rest: {
+        baseUrl: `${options.origin}${basePath}`,
+        operations: operations.map((operation) => ({
+          key: operation.key,
+          method: operation.rest.method,
+          path: operation.rest.path
+        }))
+      },
+      cli: {
+        binaryName,
+        setupCommand: installCommand
+      },
+      ...options.stdioCommand ? {
+        mcpStdio: {
+          command: options.stdioCommand
+        }
+      } : {}
+    },
+    artifacts: {
+      skillMarkdown,
+      llmsTxt
+    }
   };
 }
 
@@ -619,6 +718,11 @@ async function registerServiceAdapters(app, service, options) {
     service: service.id,
     version: service.version
   }));
+  app.get("/", async () => buildAgentServiceManifest(service, {
+    origin: options.origin,
+    installCommand: options.installCommand,
+    stdioCommand: options.stdioCommand
+  }));
   app.get("/v1/capabilities", async () => ({
     id: service.id,
     name: service.name,
@@ -627,6 +731,7 @@ async function registerServiceAdapters(app, service, options) {
     auth: service.auth?.kind ?? "none",
     adapters: ["rest", "openapi", "mcp-http", "mcp-stdio", "cli", "skill", "llms"],
     artifacts: {
+      manifest: options.origin,
       openapi: `${options.origin}/v1/openapi.json`,
       skill: `${options.origin}/artifacts/skill.md`,
       llms: `${options.origin}/llms.txt`,
@@ -957,6 +1062,7 @@ export {
   InvalidOutputError,
   InvalidRequestError,
   UnauthorizedError,
+  buildAgentServiceManifest,
   buildOpenApiSpec,
   createMcpServer,
   createNodeServiceRuntime,

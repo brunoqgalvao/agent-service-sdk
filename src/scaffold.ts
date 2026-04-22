@@ -371,6 +371,14 @@ pnpm install
 pnpm dev
 \`\`\`
 
+## Agent Setup
+
+Tell an agent:
+
+\`\`\`text
+See http://127.0.0.1:${options.port}, set it up, and start using it.
+\`\`\`
+
 ## CLI
 
 \`\`\`bash

@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import { describeOperations } from "../service.js";
 import { renderLlmsTxt } from "../artifacts/llms.js";
 import { renderSkill } from "../artifacts/skill.js";
+import { buildAgentServiceManifest } from "../artifacts/manifest.js";
 import { buildOpenApiSpec } from "./openapi.js";
 import { registerMcpHttpRoutes } from "./mcp.js";
 import { AgentServiceError, InvalidRequestError, UnauthorizedError } from "../errors.js";
@@ -85,6 +86,12 @@ export async function registerServiceAdapters<TServiceContext>(
     version: service.version,
   }));
 
+  app.get("/", async () => buildAgentServiceManifest(service, {
+    origin: options.origin,
+    installCommand: options.installCommand,
+    stdioCommand: options.stdioCommand,
+  }));
+
   app.get("/v1/capabilities", async () => ({
     id: service.id,
     name: service.name,
@@ -93,6 +100,7 @@ export async function registerServiceAdapters<TServiceContext>(
     auth: service.auth?.kind ?? "none",
     adapters: ["rest", "openapi", "mcp-http", "mcp-stdio", "cli", "skill", "llms"],
     artifacts: {
+      manifest: options.origin,
       openapi: `${options.origin}/v1/openapi.json`,
       skill: `${options.origin}/artifacts/skill.md`,
       llms: `${options.origin}/llms.txt`,

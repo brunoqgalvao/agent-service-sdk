@@ -16,14 +16,14 @@ export function renderLlmsTxt<TServiceContext>(
 
 > ${service.description}
 
-## Integration Surfaces
+## Agent Setup
 
-- Remote MCP: ${options.origin}/mcp
-- Local stdio MCP: ${options.stdioCommand ?? "Not provided"}
-- OpenAPI: ${options.origin}/v1/openapi.json
-- REST base: ${options.origin}${service.basePath ?? "/api/agent"}
+- Service manifest: ${options.origin}
+- Human instruction: see ${options.origin}, set it up, and start using it.
+- Agent instruction: read the manifest, choose the best interface your host supports, authenticate if required, and use the operations listed there.
 - CLI binary: ${binaryName}
 - CLI setup: ${setupCommand}
+${options.stdioCommand ? `- Local stdio command: ${options.stdioCommand}` : ""}
 
 ## Authentication
 

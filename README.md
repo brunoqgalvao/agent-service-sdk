@@ -1,6 +1,6 @@
 # Agent Service SDK
 
-`agent-service-sdk` lets a developer define one service contract and publish it to the agent-facing surfaces that matter:
+`agent-service-sdk` lets a developer define one service contract and publish one agent-facing setup URL. The URL returns a manifest with everything an agent needs to choose and use the right interface:
 
 - REST
 - OpenAPI
@@ -11,6 +11,12 @@
 - generated `llms.txt`
 
 The service author focuses on business logic, auth verification, and input/output schemas. The SDK handles the agent onboarding layer.
+
+The customer-facing instruction should stay basic:
+
+```text
+See https://your-service.example.com, set it up, and start using it.
+```
 
 ## What The SDK Owns
 
@@ -143,6 +149,7 @@ With that in place, one file drives HTTP serving, CLI execution, and stdio MCP.
 
 Once mounted, the service gets:
 
+- `GET /` as the single service manifest for agents
 - `GET /health`
 - `GET /v1/capabilities`
 - `GET /v1/status`
@@ -151,6 +158,8 @@ Once mounted, the service gets:
 - `GET /llms.txt`
 - `POST /mcp`
 - REST operation routes under `/api/agent/*` by default
+
+Humans should only need the root service URL. The manifest embeds the service metadata, auth instructions, operation schemas, OpenAPI spec, generated skill text, `llms.txt`, and the machine endpoints agents can use after discovery.
 
 Read-style operations with flat scalar inputs default to `GET`. Write operations stay explicit via `POST`, `PUT`, `PATCH`, or `DELETE`.
 
