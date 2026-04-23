@@ -178,6 +178,7 @@ With bearer auth, the SDK:
 - exposes CLI setup profiles for local/demo workflows
 - includes auth guidance in generated `SKILL.md` and `llms.txt`
 - includes remote MCP auth setup and error-handling notes in the root manifest
+- can advertise how agents should acquire credentials, including user-provided tokens, OAuth handoff URLs, custom flows, or explicit demo tokens
 
 Example:
 
@@ -185,6 +186,10 @@ Example:
 auth: {
   kind: "bearer",
   description: "Warehouse bearer tokens.",
+  credentialAcquisition: {
+    type: "user-provided",
+    instructions: "Ask the user for their warehouse API token.",
+  },
   cliSetup: {
     instructions: "Use --profile east-ops or pass --token directly.",
     profiles: [

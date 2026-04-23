@@ -13,11 +13,25 @@ type AuthIdentity = {
     scopes?: string[];
     metadata?: Record<string, unknown>;
 } | null;
+type AuthCredentialAcquisition = {
+    type: "user-provided" | "oauth2" | "demo" | "custom";
+    instructions: string;
+    tokenUrl?: string;
+    authorizationUrl?: string;
+    scopes?: string[];
+    profiles?: Array<{
+        id: string;
+        label: string;
+        description?: string;
+        token?: string;
+    }>;
+};
 type AuthDefinition = {
     kind: "none";
 } | {
     kind: "bearer";
     description?: string;
+    credentialAcquisition?: AuthCredentialAcquisition;
     cliSetup?: {
         instructions?: string;
         profiles?: Array<{
@@ -262,6 +276,7 @@ declare function buildAgentServiceManifest<TServiceContext>(service: AgentServic
         required: boolean;
         instructions: string;
         httpHeader: null;
+        credentialAcquisition: null;
         description?: undefined;
         profiles?: undefined;
     } | {
@@ -274,6 +289,7 @@ declare function buildAgentServiceManifest<TServiceContext>(service: AgentServic
             valueFormat: string;
             appliesTo: string[];
         };
+        credentialAcquisition: AuthCredentialAcquisition;
         profiles: {
             id: string;
             label: string;
@@ -321,11 +337,13 @@ declare function buildAgentServiceManifest<TServiceContext>(service: AgentServic
             };
             tokenVariable: string;
             appliesTo: string[];
+            credentialAcquisition: AuthCredentialAcquisition | null;
         } | {
             required: boolean;
             header?: undefined;
             tokenVariable?: undefined;
             appliesTo?: undefined;
+            credentialAcquisition?: undefined;
         };
         mcpHttp: {
             url: string;

@@ -18,8 +18,14 @@ function buildAuthManifest<TServiceContext>(service: AgentServiceDefinition<TSer
       required: false,
       instructions: "No authentication required.",
       httpHeader: null,
+      credentialAcquisition: null,
     };
   }
+
+  const credentialAcquisition = service.auth.credentialAcquisition ?? {
+    type: "user-provided",
+    instructions: "Ask the human for a bearer token or read it from the host secret store before calling protected interfaces.",
+  };
 
   return {
     kind: "bearer",
@@ -31,6 +37,7 @@ function buildAuthManifest<TServiceContext>(service: AgentServiceDefinition<TSer
       valueFormat: "Bearer <token>",
       appliesTo: ["rest", "openapi", "mcp-http"],
     },
+    credentialAcquisition,
     profiles: service.auth.cliSetup?.profiles?.map((profile) => ({
       id: profile.id,
       label: profile.label,
@@ -44,7 +51,14 @@ function buildQuickstart<TServiceContext>(
   options: AgentServiceManifestOptions,
   operations: Array<OperationDescriptor<TServiceContext>>,
 ) {
-  const authRequired = service.auth?.kind === "bearer";
+  const bearerAuth = service.auth?.kind === "bearer" ? service.auth : null;
+  const authRequired = Boolean(bearerAuth);
+  const credentialAcquisition = bearerAuth
+    ? bearerAuth.credentialAcquisition ?? {
+        type: "user-provided",
+        instructions: "Ask the human for a bearer token or read it from the host secret store before calling protected interfaces.",
+      }
+    : null;
   const firstReadOperation = operations.find((operation) => operation.rest.method === "GET") ?? operations[0];
   const firstOperation = firstReadOperation ?? operations[0];
   const firstWriteOperation = operations.find((operation) => operation.rest.method !== "GET");
@@ -68,6 +82,7 @@ function buildQuickstart<TServiceContext>(
           },
           tokenVariable: "AGENT_SERVICE_TOKEN",
           appliesTo: ["rest", "openapi", "mcp-http"],
+          credentialAcquisition,
         }
       : {
           required: false,

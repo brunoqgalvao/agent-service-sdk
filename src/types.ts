@@ -12,6 +12,20 @@ export type AuthIdentity = {
   metadata?: Record<string, unknown>;
 } | null;
 
+export type AuthCredentialAcquisition = {
+  type: "user-provided" | "oauth2" | "demo" | "custom";
+  instructions: string;
+  tokenUrl?: string;
+  authorizationUrl?: string;
+  scopes?: string[];
+  profiles?: Array<{
+    id: string;
+    label: string;
+    description?: string;
+    token?: string;
+  }>;
+};
+
 export type AuthDefinition =
   | {
       kind: "none";
@@ -19,6 +33,7 @@ export type AuthDefinition =
   | {
       kind: "bearer";
       description?: string;
+      credentialAcquisition?: AuthCredentialAcquisition;
       cliSetup?: {
         instructions?: string;
         profiles?: Array<{
