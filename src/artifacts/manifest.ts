@@ -17,6 +17,7 @@ function buildAuthManifest<TServiceContext>(service: AgentServiceDefinition<TSer
       kind: "none",
       required: false,
       instructions: "No authentication required.",
+      httpHeader: null,
     };
   }
 
@@ -25,11 +26,107 @@ function buildAuthManifest<TServiceContext>(service: AgentServiceDefinition<TSer
     required: true,
     description: service.auth.description ?? "This service requires bearer authentication.",
     instructions: service.auth.cliSetup?.instructions ?? "Provide a bearer token when configuring the service.",
+    httpHeader: {
+      name: "Authorization",
+      valueFormat: "Bearer <token>",
+      appliesTo: ["rest", "openapi", "mcp-http"],
+    },
     profiles: service.auth.cliSetup?.profiles?.map((profile) => ({
       id: profile.id,
       label: profile.label,
       description: profile.description,
     })) ?? [],
+  };
+}
+
+function buildQuickstart<TServiceContext>(
+  service: AgentServiceDefinition<TServiceContext>,
+  options: AgentServiceManifestOptions,
+  operations: Array<OperationDescriptor<TServiceContext>>,
+) {
+  const authRequired = service.auth?.kind === "bearer";
+  const firstReadOperation = operations.find((operation) => operation.rest.method === "GET") ?? operations[0];
+  const firstOperation = firstReadOperation ?? operations[0];
+  const firstWriteOperation = operations.find((operation) => operation.rest.method !== "GET");
+
+  return {
+    steps: [
+      `Fetch ${options.origin} and read this manifest.`,
+      "Use interfaces.preferredOrder to choose the best supported integration. Prefer mcp-http when your host supports remote MCP.",
+      authRequired
+        ? "Get a bearer token from the human, OAuth flow, secret store, or named setup profile before making REST, OpenAPI, or remote MCP calls."
+        : "No authentication is required before making REST, OpenAPI, or remote MCP calls.",
+      "Use operations[*].interfaces to map each operation to REST paths, MCP tool names, or CLI commands.",
+    ],
+    auth: authRequired
+      ? {
+          required: true,
+          header: {
+            name: "Authorization",
+            valueFormat: "Bearer <token>",
+            example: "Authorization: Bearer ${AGENT_SERVICE_TOKEN}",
+          },
+          tokenVariable: "AGENT_SERVICE_TOKEN",
+          appliesTo: ["rest", "openapi", "mcp-http"],
+        }
+      : {
+          required: false,
+        },
+    mcpHttp: {
+      url: `${options.origin}/mcp`,
+      package: "@modelcontextprotocol/sdk",
+      transport: "StreamableHTTPClientTransport",
+      authHeaderLocation: authRequired ? "requestInit.headers.Authorization" : null,
+      connectNotes: authRequired
+        ? [
+            "Pass the bearer token when constructing StreamableHTTPClientTransport.",
+            "Missing or invalid bearer tokens fail during MCP transport connection before tools can be listed.",
+          ]
+        : [
+            "Connect to the MCP URL directly; no auth headers are needed.",
+          ],
+      typescriptExample: [
+        "import { Client } from \"@modelcontextprotocol/sdk/client/index.js\";",
+        "import { StreamableHTTPClientTransport } from \"@modelcontextprotocol/sdk/client/streamableHttp.js\";",
+        "",
+        `const manifest = await fetch("${options.origin}").then((response) => response.json());`,
+        authRequired ? "const token = process.env.AGENT_SERVICE_TOKEN;" : "",
+        "const transport = new StreamableHTTPClientTransport(new URL(manifest.interfaces.mcpHttp.url), {",
+        authRequired ? "  requestInit: { headers: { Authorization: `Bearer ${token}` } }," : "",
+        "});",
+        "const client = new Client({ name: \"agent-client\", version: \"0.1.0\" });",
+        "await client.connect(transport);",
+        "const tools = await client.listTools();",
+        firstOperation ? `// Call ${firstOperation.mcp.toolName} with arguments that match operations[].inputSchema.` : "",
+      ].filter(Boolean).join("\n"),
+    },
+    rest: {
+      baseUrl: `${options.origin}${getBasePath(service)}`,
+      authHeaderLocation: authRequired ? "HTTP Authorization header" : null,
+      exampleRead: firstReadOperation
+        ? {
+            operationKey: firstReadOperation.key,
+            method: firstReadOperation.rest.method,
+            url: `${options.origin}${firstReadOperation.rest.path}`,
+            headers: authRequired ? { Authorization: "Bearer ${AGENT_SERVICE_TOKEN}" } : {},
+          }
+        : null,
+    },
+    errorHandling: authRequired
+      ? [
+          {
+            condition: "missing_or_invalid_token",
+            restStatus: 401,
+            mcpHttpBehavior: "The MCP connection request fails before listTools or callTool can run.",
+          },
+          {
+            condition: "missing_required_scope",
+            restStatus: 403,
+            mcpHttpBehavior: "The MCP tool call returns a tool result with isError: true and an error body.",
+            writeOperationExample: firstWriteOperation?.mcp.toolName ?? null,
+          },
+        ]
+      : [],
   };
 }
 
@@ -86,6 +183,7 @@ export function buildAgentServiceManifest<TServiceContext>(
     },
     auth: buildAuthManifest(service),
     operations: operations.map((operation) => buildOperationManifest(service, operation)),
+    quickstart: buildQuickstart(service, options, operations),
     interfaces: {
       preferredOrder: ["mcp-http", "openapi", "rest", "cli", "mcp-stdio"],
       mcpHttp: {

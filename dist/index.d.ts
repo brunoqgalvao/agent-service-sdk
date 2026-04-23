@@ -261,6 +261,7 @@ declare function buildAgentServiceManifest<TServiceContext>(service: AgentServic
         kind: string;
         required: boolean;
         instructions: string;
+        httpHeader: null;
         description?: undefined;
         profiles?: undefined;
     } | {
@@ -268,6 +269,11 @@ declare function buildAgentServiceManifest<TServiceContext>(service: AgentServic
         required: boolean;
         description: string;
         instructions: string;
+        httpHeader: {
+            name: string;
+            valueFormat: string;
+            appliesTo: string[];
+        };
         profiles: {
             id: string;
             label: string;
@@ -304,6 +310,57 @@ declare function buildAgentServiceManifest<TServiceContext>(service: AgentServic
             };
         };
     }[];
+    quickstart: {
+        steps: string[];
+        auth: {
+            required: boolean;
+            header: {
+                name: string;
+                valueFormat: string;
+                example: string;
+            };
+            tokenVariable: string;
+            appliesTo: string[];
+        } | {
+            required: boolean;
+            header?: undefined;
+            tokenVariable?: undefined;
+            appliesTo?: undefined;
+        };
+        mcpHttp: {
+            url: string;
+            package: string;
+            transport: string;
+            authHeaderLocation: string | null;
+            connectNotes: string[];
+            typescriptExample: string;
+        };
+        rest: {
+            baseUrl: string;
+            authHeaderLocation: string | null;
+            exampleRead: {
+                operationKey: string;
+                method: HttpMethod;
+                url: string;
+                headers: {
+                    Authorization: string;
+                } | {
+                    Authorization?: undefined;
+                };
+            } | null;
+        };
+        errorHandling: ({
+            condition: string;
+            restStatus: number;
+            mcpHttpBehavior: string;
+            writeOperationExample?: undefined;
+        } | {
+            condition: string;
+            restStatus: number;
+            mcpHttpBehavior: string;
+            writeOperationExample: string | null;
+        })[];
+    };
     interfaces: {
         mcpStdio?: {
             command: string;

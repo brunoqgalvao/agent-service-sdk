@@ -1,6 +1,6 @@
 {
   "name": "agent-service-sdk",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Expose one service to many AI agent surfaces from a single definition.",
   "license": "MIT",
   "type": "module",

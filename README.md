@@ -159,7 +159,7 @@ Once mounted, the service gets:
 - `POST /mcp`
 - REST operation routes under `/api/agent/*` by default
 
-Humans should only need the root service URL. The manifest embeds the service metadata, auth instructions, operation schemas, OpenAPI spec, generated skill text, `llms.txt`, and the machine endpoints agents can use after discovery.
+Humans should only need the root service URL. The manifest embeds the service metadata, auth instructions, operation schemas, OpenAPI spec, generated skill text, `llms.txt`, and the machine endpoints agents can use after discovery. It also includes an auth-aware `quickstart` section that tells agents where to place bearer tokens for REST, OpenAPI, and remote MCP, plus how auth failures surface on each interface.
 
 Read-style operations with flat scalar inputs default to `GET`. Write operations stay explicit via `POST`, `PUT`, `PATCH`, or `DELETE`.
 
@@ -177,6 +177,7 @@ With bearer auth, the SDK:
 - enforces per-operation scopes
 - exposes CLI setup profiles for local/demo workflows
 - includes auth guidance in generated `SKILL.md` and `llms.txt`
+- includes remote MCP auth setup and error-handling notes in the root manifest
 
 Example:
 
