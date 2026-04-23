@@ -136,6 +136,41 @@ export async function registerServiceAdapters<TServiceContext>(
     }
   });
 
+  if (service.auth?.kind === "bearer" && service.auth.credentialAcquisition?.type === "demo") {
+    app.get("/auth/demo-token", async (request, reply) => {
+      const profileId = (request.query as { profile?: string }).profile;
+      const profile = service.auth?.kind === "bearer"
+        ? service.auth.credentialAcquisition?.profiles?.find((candidate) => candidate.id === profileId)
+        : undefined;
+
+      if (!profileId) {
+        reply.status(400);
+        return reply.send({
+          error: "invalid_request",
+          message: "Missing required query parameter: profile.",
+        });
+      }
+
+      if (!profile?.token) {
+        reply.status(404);
+        return reply.send({
+          error: "not_found",
+          message: `No demo token is available for profile ${profileId}.`,
+        });
+      }
+
+      return {
+        tokenType: "Bearer",
+        token: profile.token,
+        profile: {
+          id: profile.id,
+          label: profile.label,
+          description: profile.description,
+        },
+      };
+    });
+  }
+
   app.get("/v1/openapi.json", async () => buildOpenApiSpec(service, { origin: options.origin }));
 
   app.get("/artifacts/skill.md", async (_request, reply) => {

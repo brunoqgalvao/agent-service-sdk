@@ -325,7 +325,26 @@ function buildOpenApiSpec(service, options) {
 }
 
 // src/artifacts/manifest.ts
-function buildAuthManifest(service) {
+function resolveCredentialAcquisition(service, origin) {
+  if (service.auth?.kind !== "bearer") {
+    return null;
+  }
+  const raw = service.auth.credentialAcquisition ?? {
+    type: "user-provided",
+    instructions: "Ask the human for a bearer token or read it from the host secret store before calling protected interfaces."
+  };
+  const tokenUrl = raw.tokenUrl ? raw.tokenUrl.startsWith("/") ? `${origin}${raw.tokenUrl}` : raw.tokenUrl : raw.type === "demo" && raw.profiles?.some((profile) => profile.token) ? `${origin}/auth/demo-token` : void 0;
+  return {
+    ...raw,
+    ...tokenUrl ? { tokenUrl } : {},
+    profiles: raw.profiles?.map((profile) => ({
+      id: profile.id,
+      label: profile.label,
+      description: profile.description
+    }))
+  };
+}
+function buildAuthManifest(service, origin) {
   if (!service.auth || service.auth.kind === "none") {
     return {
       kind: "none",
@@ -335,10 +354,6 @@ function buildAuthManifest(service) {
       credentialAcquisition: null
     };
   }
-  const credentialAcquisition = service.auth.credentialAcquisition ?? {
-    type: "user-provided",
-    instructions: "Ask the human for a bearer token or read it from the host secret store before calling protected interfaces."
-  };
   return {
     kind: "bearer",
     required: true,
@@ -349,7 +364,7 @@ function buildAuthManifest(service) {
       valueFormat: "Bearer <token>",
       appliesTo: ["rest", "openapi", "mcp-http"]
     },
-    credentialAcquisition,
+    credentialAcquisition: resolveCredentialAcquisition(service, origin),
     profiles: service.auth.cliSetup?.profiles?.map((profile) => ({
       id: profile.id,
       label: profile.label,
@@ -360,10 +375,7 @@ function buildAuthManifest(service) {
 function buildQuickstart(service, options, operations) {
   const bearerAuth = service.auth?.kind === "bearer" ? service.auth : null;
   const authRequired = Boolean(bearerAuth);
-  const credentialAcquisition = bearerAuth ? bearerAuth.credentialAcquisition ?? {
-    type: "user-provided",
-    instructions: "Ask the human for a bearer token or read it from the host secret store before calling protected interfaces."
-  } : null;
+  const credentialAcquisition = resolveCredentialAcquisition(service, options.origin);
   const firstReadOperation = operations.find((operation) => operation.rest.method === "GET") ?? operations[0];
   const firstOperation = firstReadOperation ?? operations[0];
   const firstWriteOperation = operations.find((operation) => operation.rest.method !== "GET");
@@ -479,7 +491,7 @@ function buildAgentServiceManifest(service, options) {
       version: service.version,
       description: service.description
     },
-    auth: buildAuthManifest(service),
+    auth: buildAuthManifest(service, options.origin),
     operations: operations.map((operation) => buildOperationManifest(service, operation)),
     quickstart: buildQuickstart(service, options, operations),
     interfaces: {
@@ -859,6 +871,35 @@ async function registerServiceAdapters(app, service, options) {
       return sendServiceError(reply, error);
     }
   });
+  if (service.auth?.kind === "bearer" && service.auth.credentialAcquisition?.type === "demo") {
+    app.get("/auth/demo-token", async (request, reply) => {
+      const profileId = request.query.profile;
+      const profile = service.auth?.kind === "bearer" ? service.auth.credentialAcquisition?.profiles?.find((candidate) => candidate.id === profileId) : void 0;
+      if (!profileId) {
+        reply.status(400);
+        return reply.send({
+          error: "invalid_request",
+          message: "Missing required query parameter: profile."
+        });
+      }
+      if (!profile?.token) {
+        reply.status(404);
+        return reply.send({
+          error: "not_found",
+          message: `No demo token is available for profile ${profileId}.`
+        });
+      }
+      return {
+        tokenType: "Bearer",
+        token: profile.token,
+        profile: {
+          id: profile.id,
+          label: profile.label,
+          description: profile.description
+        }
+      };
+    });
+  }
   app.get("/v1/openapi.json", async () => buildOpenApiSpec(service, { origin: options.origin }));
   app.get("/artifacts/skill.md", async (_request, reply) => {
     reply.type("text/markdown");

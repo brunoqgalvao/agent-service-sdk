@@ -289,7 +289,18 @@ declare function buildAgentServiceManifest<TServiceContext>(service: AgentServic
             valueFormat: string;
             appliesTo: string[];
         };
-        credentialAcquisition: AuthCredentialAcquisition;
+        credentialAcquisition: {
+            profiles: {
+                id: string;
+                label: string;
+                description: string | undefined;
+            }[] | undefined;
+            tokenUrl?: string;
+            type: "user-provided" | "oauth2" | "demo" | "custom";
+            instructions: string;
+            authorizationUrl?: string;
+            scopes?: string[];
+        } | null;
         profiles: {
             id: string;
             label: string;
@@ -337,7 +348,18 @@ declare function buildAgentServiceManifest<TServiceContext>(service: AgentServic
             };
             tokenVariable: string;
             appliesTo: string[];
-            credentialAcquisition: AuthCredentialAcquisition | null;
+            credentialAcquisition: {
+                profiles: {
+                    id: string;
+                    label: string;
+                    description: string | undefined;
+                }[] | undefined;
+                tokenUrl?: string;
+                type: "user-provided" | "oauth2" | "demo" | "custom";
+                instructions: string;
+                authorizationUrl?: string;
+                scopes?: string[];
+            } | null;
         } | {
             required: boolean;
             header?: undefined;
