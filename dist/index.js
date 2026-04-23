@@ -444,7 +444,7 @@ function buildQuickstart(service, options, operations) {
       {
         condition: "missing_required_scope",
         restStatus: 403,
-        mcpHttpBehavior: "The MCP tool call returns a tool result with isError: true and an error body.",
+        mcpHttpBehavior: "The MCP tool call returns a tool result with isError: true, structuredContent.status = 403, and a JSON text error body.",
         writeOperationExample: firstWriteOperation?.mcp.toolName ?? null
       }
     ] : []
@@ -625,17 +625,19 @@ function serializeMcpError(error) {
     "internal_error",
     error instanceof Error ? error.message : String(error)
   );
+  const body = {
+    error: normalized.code,
+    status: normalized.status,
+    message: normalized.message,
+    ...normalized.details === void 0 ? {} : { details: normalized.details }
+  };
   return {
     isError: true,
+    structuredContent: body,
     content: [
       {
         type: "text",
-        text: JSON.stringify({
-          error: normalized.code,
-          status: normalized.status,
-          message: normalized.message,
-          ...normalized.details === void 0 ? {} : { details: normalized.details }
-        }, null, 2)
+        text: JSON.stringify(body, null, 2)
       }
     ]
   };

@@ -41,7 +41,11 @@ function zodRawShapeFromOperationShape(shape: Record<string, unknown>): ZodRawSh
   return shape as ZodRawShape;
 }
 
-function serializeMcpError(error: unknown): { isError: true; content: Array<{ type: "text"; text: string }> } {
+function serializeMcpError(error: unknown): {
+  isError: true;
+  structuredContent: Record<string, unknown>;
+  content: Array<{ type: "text"; text: string }>;
+} {
   const normalized = error instanceof AgentServiceError
     ? error
     : error instanceof ZodError
@@ -54,18 +58,20 @@ function serializeMcpError(error: unknown): { isError: true; content: Array<{ ty
           "internal_error",
           error instanceof Error ? error.message : String(error),
         );
+  const body = {
+    error: normalized.code,
+    status: normalized.status,
+    message: normalized.message,
+    ...(normalized.details === undefined ? {} : { details: normalized.details }),
+  };
 
   return {
     isError: true,
+    structuredContent: body,
     content: [
       {
         type: "text",
-        text: JSON.stringify({
-          error: normalized.code,
-          status: normalized.status,
-          message: normalized.message,
-          ...(normalized.details === undefined ? {} : { details: normalized.details }),
-        }, null, 2),
+        text: JSON.stringify(body, null, 2),
       },
     ],
   };

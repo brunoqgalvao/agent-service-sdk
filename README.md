@@ -180,6 +180,7 @@ With bearer auth, the SDK:
 - includes remote MCP auth setup and error-handling notes in the root manifest
 - can advertise how agents should acquire credentials, including user-provided tokens, OAuth handoff URLs, custom flows, or explicit demo tokens
 - serves `GET /auth/demo-token?profile=<id>` for services that explicitly opt into `credentialAcquisition.type: "demo"` with profile tokens
+- returns structured MCP error content for tool-call failures, so agents can inspect status and error codes without parsing text
 
 Example:
 
